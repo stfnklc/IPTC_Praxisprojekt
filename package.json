@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "@prisma/client": "^6.16.3",
+    "deepl-node": "^1.19.1",
+    "exiftool-vendored": "^31.1.0"
+  },
+  "devDependencies": {
+    "prisma": "^6.16.3"
+  }
+}
