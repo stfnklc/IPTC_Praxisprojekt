@@ -37,14 +37,13 @@ Am Ende soll ein fertiger Prototyp entstehen, der den gesamten Prozess – von d
 
 ## Tech-Stack (geplant/aktuell)
 
-Frontend: Vite, React und TypeScript
+Frontend: HTML, CSS und TypeScript
 
 Backend: Node.js, TypeScript und Fastify
 
 Übersetzung: API-Anbindung (DeepLFree)
 
-Metadaten-Verarbeitung: ExifTool 
+Metadaten-Verarbeitung: ExifTool und ExifReader
 
 Speicherung: lokales Dateisystem
 
-ORM u. DB: Prisma und SQLite
