@@ -1,13 +1,13 @@
 {
   "compilerOptions": {
-    "target": "ES2020", // Modernes JavaScript als Ziel
-    "module": "CommonJS", // Für Node.js
-    "rootDir": "./src", // Wo unsere TS-Dateien liegen
-    "outDir": "./dist", // Wohin der kompilierte JS-Code soll
+    "target": "ES2020", 
+    "module": "CommonJS", 
+    "rootDir": "./src", 
+    "outDir": "./dist", 
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "strict": true, // Aktiviert wichtige Typprüfungen
+    "strict": true, 
     "skipLibCheck": true
   },
-  "include": ["src/**/*"] // Nur Dateien im src-Ordner kompilieren
+  "include": ["src/**/*"] 
 }

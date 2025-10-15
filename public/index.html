@@ -1,11 +1,29 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPTC Übersetzer</title>
+    <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-  
+    <main>
+        <h1>IPTC Metadaten Übersetzer</h1>
+
+        <form id="upload-form">
+            <label for="image-upload">Bilddatei auswählen:</label>
+            <input type="file" id="image-upload" name="image" accept="image/jpeg, image/tiff" required>
+            <button type="submit">Metadaten auslesen</button>
+        </form>
+
+        <hr>
+
+        <div id="results-container" style="display: none;">
+            <h2>Extrahierte Metadaten</h2>
+            <div id="metadata-output"></div>
+        </div>
+    </main>
+
+    <script src="/frontend/main.js" defer></script>
 </body>
 </html>

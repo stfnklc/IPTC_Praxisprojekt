@@ -1,13 +1,9 @@
 node_modules
-server/node_modules
 # Build output
 dist/
-
 # Temp files
 uploads/
-
 # Log files
 *.log
-
 # Environment variables
 .env
