@@ -19,8 +19,40 @@
         <hr>
 
         <div id="results-container" style="display: none;">
-            <h2>Extrahierte Metadaten</h2>
-            <div id="metadata-output"></div>
+            <h2>Review & Übersetzung</h2>
+            <form id="edit-form">
+                <div class="form-columns">
+                    
+                    <div class="column" id="original-column">
+                        <h3>Original (ausgelesen)</h3>
+                        <label for="original-title">Titel</label>
+                        <input type="text" id="original-title" name="original-title">
+
+                        <label for="original-description">Beschreibung</label>
+                        <textarea id="original-description" name="original-description" rows="5"></textarea>
+
+                        <label for="original-keywords">Schlagwörter (mit Komma getrennt)</label>
+                        <textarea id="original-keywords" name="original-keywords" rows="3"></textarea>
+                    </div>
+
+                    <div class="column" id="translation-column">
+                        <h3>Übersetzung (DE)</h3>
+                        <label for="translated-title">Titel</label>
+                        <input type="text" id="translated-title" name="translated-title">
+
+                        <label for="translated-description">Beschreibung</label>
+                        <textarea id="translated-description" name="translated-description" rows="5"></textarea>
+
+                        <label for="translated-keywords">Schlagwörter (mit Komma getrennt)</label>
+                        <textarea id="translated-keywords" name="translated-keywords" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" id="translate-button">Übersetzen</button>
+                    <button type="submit" id="export-button">Speichern & Exportieren</button>
+                </div>
+            </form>
         </div>
     </main>
 

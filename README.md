@@ -43,7 +43,7 @@ Backend: Node.js, TypeScript und Fastify
 
 Übersetzung: API-Anbindung (DeepLFree)
 
-Metadaten-Verarbeitung: ExifTool und ExifReader
+Metadaten-Verarbeitung: ExifTool
 
 Speicherung: lokales Dateisystem
 
