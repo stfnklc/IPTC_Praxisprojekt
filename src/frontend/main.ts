@@ -1,157 +1,166 @@
-const form = document.getElementById('upload-form') as HTMLFormElement;
-const fileInput = document.getElementById('image-upload') as HTMLInputElement;
-const resultsContainer = document.getElementById('results-container')!;
-const metadataOutput = document.getElementById('metadata-output')!;
-let currentFilename = '';
+import { StateService } from "./stateService";
+import { ApiService } from "./apiService";
+import { UiService } from "./uiService";
 
-form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    console.log('Formular abgeschickt. Starte Upload...'); 
+class App {
+    private state: StateService;
+    private api: ApiService;
+    private ui: UiService;
 
-    const files = fileInput.files;
-    if (!files || files.length === 0) {
-        alert('Bitte wähle eine Datei aus.');
-        return;
+    constructor() {
+        this.state = new StateService();
+        this.api = new ApiService();
+        this.ui = new UiService();
     }
 
-    const formData = new FormData();
-    formData.append('file', files[0]);
-    try {
-        console.log('Sende fetch-Anfrage an /api/upload...'); 
-        const response = await fetch('http://localhost:3000/api/upload', {
-            method: 'POST',
-            body: formData,
+    public init(): void {
+        document.addEventListener('DOMContentLoaded', () => {
+            this.loadLanguages();
+            this.setupEventListeners();
+        });
+    }
+
+    private async loadLanguages(): Promise<void> {
+        try {
+            const languages = await this.api.getLanguages();
+            this.ui.populateLanguages(languages);
+        } catch (error) {
+            console.error("Fehler beim Laden der Sprachenliste:", error);
+            this.ui.setLanguageErrorState();
+        }
+    }
+
+    private setupEventListeners(): void {
+        this.ui.form.addEventListener('submit', this.handleUploadSubmit.bind(this));
+        
+        this.ui.selectAllButton.addEventListener('click', () => {
+            this.ui.setAllCheckboxes(true);
+            this.updateDisplayedFields();
+        });
+        
+        this.ui.deselectAllButton.addEventListener('click', () => {
+            this.ui.setAllCheckboxes(false);
+            this.updateDisplayedFields();
+        });
+        
+        this.ui.selectCommonButton.addEventListener('click', () => {
+            this.ui.selectCommonCheckboxes();
+            this.updateDisplayedFields();
+        });
+        
+        this.ui.updateDisplayButton.addEventListener('click', this.updateDisplayedFields.bind(this));
+        
+        this.ui.translateButton.addEventListener('click', this.handleTranslate.bind(this));
+        
+        this.ui.exportEditedButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.handleExport('edited');
+        });
+        
+        this.ui.exportTranslatedButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.handleExport('translated');
         });
 
-        console.log('Antwort vom Server erhalten:', response); 
-        if (!response.ok) {   
-            const errorText = await response.text();
-            throw new Error(`Serverfehler: ${response.status} - ${errorText}`);
-        } 
-        const result = await response.json();
-        currentFilename = result.filename;
-        displayMetadata(result.metadata);
-        console.log('Metadaten-Anzeige wurde aufgerufen.'); 
-    } catch (error) {
-        console.error('FEHLER im fetch-Block:', error); 
-        alert('Ein Fehler ist aufgetreten. Siehe Browser-Konsole für Details.');
-    }
-});
-
-const translateButton = document.getElementById('translate-button')!;
-translateButton.addEventListener('click', async () => {
-  
-  // 1. Original-Daten aus den Formularfeldern auslesen
-  const originalTitle = (document.getElementById('original-title') as HTMLInputElement).value;
-  const originalDescription = (document.getElementById('original-description') as HTMLTextAreaElement).value;
-  const originalKeywords = (document.getElementById('original-keywords') as HTMLTextAreaElement).value;
-
-  console.log('Sende zur Übersetzung:', { originalTitle, originalDescription, originalKeywords });
-
-  try {
-    const response = await fetch('http://localhost:3000/api/translate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        title: originalTitle,
-        description: originalDescription,
-        keywords: originalKeywords,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Fehler bei der Übersetzung.');
-    }
-
-    const translatedData = await response.json();
-    console.log('Übersetzung erhalten:', translatedData);
-
-    (document.getElementById('translated-title') as HTMLInputElement).value = translatedData.title;
-    (document.getElementById('translated-description') as HTMLTextAreaElement).value = translatedData.description;
-    (document.getElementById('translated-keywords') as HTMLTextAreaElement).value = translatedData.keywords;
-
-  } catch (error) {
-    console.error('Fehler beim Übersetzen:', error);
-    alert('Die Übersetzung ist fehlgeschlagen. (Ist der DeepL API Key korrekt?)');
-  }
-});
-
-const editForm = document.getElementById('edit-form') as HTMLFormElement;
-
-editForm.addEventListener('submit', async (event) => {
-    event.preventDefault(); 
-    console.log('Export-Formular abgeschickt. Verhindere Neuladen.');
-    const title = (document.getElementById('original-title') as HTMLInputElement).value;
-    const description = (document.getElementById('original-description') as HTMLTextAreaElement).value;
-    const keywordsString = (document.getElementById('original-keywords') as HTMLTextAreaElement).value;
-    const keywords = keywordsString.split(',')       
-                               .map(kw => kw.trim())   
-                               .filter(kw => kw.length > 0); 
-    if (!currentFilename) {
-        alert('Fehler: Keinen Dateinamen gefunden. Bitte lade das Bild erneut hoch.');
-        return;
-    }
-    const payload = {
-        filename: currentFilename,
-        metadata: {
-            title: title,
-            description: description,
-            keywords: keywords 
-        }
-    };
-    console.log('SENDE AN SERVER:', JSON.stringify(payload, null, 2));
-
-    try {
-        console.log('Sende Daten an /api/write-and-download...');
-        const response = await fetch('http://localhost:3000/api/write-and-download', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                filename: currentFilename,
-                metadata: {
-                    title: title,
-                    description: description,
-                    keywords: keywords 
-                }
-            })
+        this.ui.targetLanguageSelect.addEventListener('change', () => {
+            this.ui.updateLanguageLabel();
         });
+    }
 
-        if (!response.ok) {
-            throw new Error('Fehler beim Erstellen der Datei auf dem Server.');
+    private updateDisplayedFields(): void {
+        const discoveredArrayKeys = this.ui.displaySelectedMetadata(this.state.getMetadata());
+        this.state.setArrayTagKeys(discoveredArrayKeys);
+    }
+
+    private async handleUploadSubmit(event: Event): Promise<void> {
+        event.preventDefault();
+        
+        const files = this.ui.fileInput.files;
+        if (!files || files.length === 0) {
+            this.ui.showAlert('Bitte wähle eine Datei aus.');
+            return;
         }
 
-        console.log('Datei vom Server erhalten, starte Download...');
-        const blob = await response.blob(); 
-        const url = window.URL.createObjectURL(blob);   
-        const a = document.createElement('a'); 
-        a.style.display = 'none';
-        a.href = url;
-        a.download = `translated_${currentFilename}`; 
-        document.body.appendChild(a);  
-        a.click(); 
+        const formData = new FormData(this.ui.form);
+        
+        try {
+            const result = await this.api.uploadImage(formData);
+            this.state.setUploadResult(result.filename, result.metadata);
+            
+            this.ui.populateTagSelection(this.state.getMetadata());
+            this.updateDisplayedFields();
+            this.ui.showResultsContainer(true);
 
-        window.URL.revokeObjectURL(url);
-        a.remove();
-
-    } catch (error) {
-        console.error('Fehler beim Exportieren:', error);
-        alert('Export fehlgeschlagen. Siehe Konsole für Details.');
+        } catch (error) {
+            console.error('Upload Fehler:', error);
+            const message = (error instanceof Error) ? error.message : String(error);
+            this.ui.showAlert(`Fehler beim Auslesen der Metadaten: ${message}`);
+        }
     }
-});
 
+    private async handleTranslate(): Promise<void> {
+        const tagsToTranslate = this.ui.getOriginalTagsToTranslate();
+        if (Object.keys(tagsToTranslate).length === 0) {
+            this.ui.showAlert("Keine übersetzbaren Textfelder ausgewählt oder gefüllt.");
+            return;
+        }
 
-function displayMetadata(metadata: { title: string; description: string; keywords: string[] }) {
-    const originalTitle = document.getElementById('original-title') as HTMLInputElement;
-    const originalDescription = document.getElementById('original-description') as HTMLTextAreaElement;
-    const originalKeywords = document.getElementById('original-keywords') as HTMLTextAreaElement;
-    
-    originalTitle.value = metadata.title;
-    originalDescription.value = metadata.description;
-    originalKeywords.value = metadata.keywords.join(', ');
+        const targetLang = this.ui.getTargetLanguage();
+        this.ui.setTranslateButtonState(true, targetLang.text);
 
-    resultsContainer.style.display = 'block';
+        try {
+            const translatedTags = await this.api.translateTags(
+                tagsToTranslate,
+                Array.from(this.state.getArrayTagKeys()),
+                targetLang.value
+            );
+            
+            this.ui.updateTranslationFields(translatedTags);
+            this.ui.showAlert('Übersetzung abgeschlossen!');
+
+        } catch (error) {
+            console.error('Übersetzungsfehler:', error);
+            const message = (error instanceof Error) ? error.message : 'Unbekannter Fehler.';
+            this.ui.showAlert(`Übersetzung fehlgeschlagen: ${message}\n(API Key korrekt? Genug Kontingent?)`);
+        } finally {
+            this.ui.setTranslateButtonState(false, targetLang.text);
+        }
+    }
+
+    private async handleExport(exportType: 'edited' | 'translated'): Promise<void> {
+        const { metadataToWrite, selectedFormat } = this.ui.getExportData(
+            exportType, 
+            this.state.getArrayTagKeys()
+        );
+
+        if (Object.keys(metadataToWrite).length === 0) {
+            this.ui.showAlert(`Keine ${exportType === 'edited' ? 'bearbeiteten Original-' : 'übersetzten '}Daten zum Speichern vorhanden.`);
+            return;
+        }
+
+        const currentFilename = this.state.getFilename();
+        if (!currentFilename) {
+            this.ui.showAlert('Kein Dateiname.');
+            return;
+        }
+
+        try {
+            const { blob, downloadFilename } = await this.api.writeAndDownload(
+                currentFilename,
+                metadataToWrite,
+                selectedFormat
+            );
+            
+            this.ui.triggerDownload(blob, downloadFilename);
+            this.ui.showAlert('Export erfolgreich!');
+
+        } catch (error) {
+            console.error('Exportfehler:', error);
+            const message = (error instanceof Error) ? error.message : 'Unbekannter Fehler.';
+            this.ui.showAlert(`Export fehlgeschlagen: ${message}`);
+        }
+    }
 }
+
+const app = new App();
+app.init();

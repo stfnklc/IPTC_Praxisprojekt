@@ -4,10 +4,13 @@
   "description": "Dieses Projekt wurde im Rahmen des Universitätsmoduls „Praxisprojekt“ entwickelt. Ziel ist es, einen funktionsfähigen Prototyp einer Web-Anwendung bereitzustellen, der den Umgang mit IPTC-Daten in Bilddateien erleichtert und den Übersetzungsprozess unterstützt.",
   "main": "index.js",
   "scripts": {
-    "build": "tsc",
-    "build:watch": "tsc --watch",
+    "build:backend": "tsc",
+    "build:frontend": "esbuild src/frontend/main.ts --bundle --format=iife --outfile=dist/frontend/main.js --sourcemap",
+    "build": "npm run build:backend && npm run build:frontend",
+    "watch:backend": "tsc --watch",
+    "watch:frontend": "npm run build:frontend -- --watch",
     "start": "node dist/backend/server.js",
-    "dev": "concurrently \"npm:build:watch\" \"nodemon dist/backend/server.js\""
+    "dev": "concurrently \"npm:watch:backend\" \"npm:watch:frontend\" \"nodemon dist/backend/server.js\""
   },
   "repository": {
     "type": "git",
@@ -37,6 +40,7 @@
     "@types/mime-types": "^3.0.1",
     "@types/node": "^24.7.2",
     "concurrently": "^9.2.1",
+    "esbuild": "^0.25.11",
     "nodemon": "^3.1.10",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"

@@ -9,5 +9,11 @@
     "strict": true, 
     "skipLibCheck": true
   },
-  "include": ["src/**/*"] 
+  "include": [
+    "src/backend/**/*.ts" // SAGE TSC, NUR DAS BACKEND ZU BAUEN
+  ],
+  "exclude": [
+    "node_modules",
+    "src/frontend" // Ignoriere das Frontend komplett
+  ]
 }

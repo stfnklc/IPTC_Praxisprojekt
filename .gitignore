@@ -1,9 +1,12 @@
 node_modules
 # Build output
 dist/
+public/frontend/main.js
+public/frontend/main.js.map
 # Temp files
 uploads/
 # Log files
 *.log
 # Environment variables
 .env
+.gradle/
