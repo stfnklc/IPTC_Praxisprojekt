@@ -3,76 +3,136 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IPTC Übersetzer</title>
+    <title>IPTC Metadaten Übersetzer</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
+    
+    <header class="app-header">
+        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="app-logo"><path d="M12 22h6a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v5.5"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m4 18 1.5-1.5c.9-.9 2.2-.9 3 0L10 18"/><path d="m3 14 1.5-1.5c.9-.9 2.2-.9 3 0L9 14"/></svg>
+        
+        <h1 id="app-title">IPTC Metadaten Übersetzer</h1>
+        <p class="subtitle">Automatische Übersetzung von IPTC-Metadaten in Bilddateien</p>
+    </header>
+
     <main>
-        <h1>IPTC Metadaten Übersetzer</h1>
-
-        <form id="upload-form">
-            <label for="image-upload">Bilddatei auswählen:</label>
-            <input type="file" id="image-upload" name="image" accept="image/jpeg, image/tiff, image/png, image/gif, image/heic, image/avif" required>
-            <button type="submit">Metadaten auslesen</button>
-        </form>
-
-        <hr>
-
-        <div id="results-container" style="display: none;">
-            <h2>Review & Übersetzung</h2>
-
-            <fieldset id="tag-selection-fieldset" class="tag-selection">
-                 <legend>Angezeigte Tags auswählen:</legend>
-                 <div id="tag-selection-options">
-                     </div>
-                 <div class="tag-selection-actions">
-                    <button type="button" id="select-all-tags">Alle auswählen</button>
-                    <button type="button" id="deselect-all-tags">Alle abwählen</button>
-                    <button type="button" id="select-common-tags">Gängige auswählen</button>
-                    <button type="button" id="update-display-button">Anzeige aktualisieren</button>
-                 </div>
-            </fieldset>
-
-            <div class="language-selection">
-                <label for="target-language">Zielsprache für Übersetzung:</label>
-                <select id="target-language" name="target-language">
-                    <option value="">Lade Sprachen...</option> 
-                </select>
-            </div>
-
-            <form id="edit-form">
-                <div class="form-columns">
-                    <div class="column" id="original-column">
-                        <h3>Original / Bearbeitet</h3>
-                        <div id="original-fields-container" class="fields-container"></div>
-                    </div>
-                    <div class="column" id="translation-column">
-                        <h3>Übersetzung (<span id="translation-target-lang-label">DE</span>)</h3>
-                        <div id="translated-fields-container" class="fields-container"></div>
-                    </div>
-                </div>
-                <fieldset class="export-options">
-                    <legend>Exportformat auswählen:</legend>
-                    <label>
-                        <input type="radio" name="export-format" value="image" checked> Neue Bilddatei (.jpg)
+        <div class="card" id="upload-card">
+            <h2>Bilddatei auswählen</h2>
+            <p class="subtitle">Unterstützte Formate: JPEG, TIFF, PNG, HEIC, AVIF</p>
+            
+            <form id="upload-form">
+                <div class="form-group file-input-group">
+                    <label for="image-upload" class="file-input-label">
+                        <span id="file-name-display">Datei auswählen (Keine ausgewählt)</span>
                     </label>
-                    <label>
-                        <input type="radio" name="export-format" value="json"> Metadaten (.json)
-                    </label>
-                    <label>
-                        <input type="radio" name="export-format" value="zip"> ZIP-Archiv (mit Bilddatei)
-                    </label>
-                </fieldset>
-
-                <div class="form-actions">
-                    <button type="button" id="translate-button">Ausgewählte übersetzen</button>
-                    <button type="submit" id="export-edited-button" class="export-button">Bearbeitete Originale speichern</button>
-                    <button type="submit" id="export-translated-button" class="export-button">Übersetzung speichern</button>
+                    <input type="file" id="image-upload" name="image" accept="image/jpeg, image/tiff, image/png, image/gif, image/heic, image/avif" required>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                        Metadaten auslesen
+                    </button>
                 </div>
             </form>
+            
+            <button type="button" id="add-template-button" class="btn btn-secondary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" x2="12" y1="18" y2="12"/><line x1="9" x2="15" y1="15" y2="15"/></svg>
+                Leere Vorlage erstellen
+            </button>
+        </div>
+
+        <div class="card" id="results-card" style="display: none;">
+            <div id="results-container">
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: -0.5rem;">
+                    <h2>Review & Übersetzung</h2>
+                    
+                    <button type="button" id="back-to-upload-button" class="btn btn-tertiary">
+                        &larr; Zurück
+                    </button>
+                </div>
+                
+                <p class="subtitle">Überprüfe die ausgelesenen Metadaten und übersetze sie in die gewünschte Zielsprache.</p>
+                
+                <details class="accordion" id="tag-selection-accordion" open>
+                    <summary class="accordion-header">
+                        Tag-Auswahl & Filter
+                    </summary>
+                    <div class="accordion-content" id="tag-selection-fieldset">
+                        <h3>Zu übersetzende Tags auswählen:</h3>
+                        
+                        <div id="tag-selection-options">
+                            </div>
+
+                        <div class="tag-selection-actions">
+                           <button type="button" id="select-all-tags" class="btn btn-tertiary">Alle auswählen</button>
+                           <button type="button" id="deselect-all-tags" class="btn btn-tertiary">Alle abwählen</button>
+                           <button type="button" id="select-common-tags" class="btn btn-tertiary">Gängige auswählen</button>
+                           <button type="button" id="update-display-button" class="btn btn-secondary">Anzeige aktualisieren</button>
+                        </div>
+                    </div>
+                </details>
+
+                <form id="edit-form">
+                    <div class="form-columns">
+                        <div class="column" id="original-column">
+                            <h3 class="column-header">Original (ausgelesen)</h3>
+                            <div id="original-fields-container" class="fields-container">
+                                </div>
+                        </div>
+                        
+                        <div class="column" id="translation-column">
+                            <div class="select-wrapper column-header-select">
+                                <select id="target-language" name="target-language" aria-label="Zielsprache für Übersetzung">
+                                    <option value="">Lade Sprachen...</option> 
+                                </select>
+                            </div>
+                            <div id="translated-fields-container" class="fields-container">
+                                </div>
+                        </div>
+                    </div>
+
+                    <fieldset class="export-options">
+                        <legend>Exportformat auswählen:</legend>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="export-format" value="image" checked> 
+                                <span>Neue Bilddatei</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="export-format" value="json"> 
+                                <span>Metadaten (.json)</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="export-format" value="zip"> 
+                                <span>ZIP-Archiv</span>
+                            </label>
+                        </div>
+                    </fieldset>
+
+                    <div class="form-actions">
+                        <button type="button" id="translate-button" class="btn btn-secondary">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-2"/><path d="M2 5h12"/><path d="M7 2h1m6 0h1"/><path d="M22 5h-6"/><path d="M16 3v2M20 3v2"/><path d="M14 11v10"/><path d="M18 11v10"/><path d="M11 15h10"/></svg>
+                            Ausgewählte übersetzen
+                        </button>
+                        <button type="submit" id="export-edited-button" class="btn btn-primary-outline">
+                            Originale speichern
+                        </button>
+                        <button type="submit" id="export-translated-button" class="btn btn-success">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                            Übersetzung speichern
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </main>
+    
+    <footer class="app-footer">
+        Universitätsmodul „Praxisprojekt“ – NMT-Integration für IPTC-Metadaten
+    </footer>
 
     <script src="/frontend/main.js" defer></script>
 </body>
 </html>
+
+

@@ -2,6 +2,14 @@ import { StateService } from "./stateService";
 import { ApiService } from "./apiService";
 import { UiService } from "./uiService";
 
+const IPTC_TEMPLATE_FIELDS: string[] = [
+    'IPTC:ObjectName', 'IPTC:Caption-Abstract', 'IPTC:Keywords',
+    'IPTC:Creator', 'IPTC:CopyrightNotice', 'IPTC:Credit',
+    'IPTC:City', 'IPTC:Province-State', 'IPTC:Country-PrimaryLocationName'
+];
+const TEMPLATE_ARRAY_KEYS: Set<string> = new Set(['IPTC:Keywords']);
+
+
 class App {
     private state: StateService;
     private api: ApiService;
@@ -33,6 +41,8 @@ class App {
     private setupEventListeners(): void {
         this.ui.form.addEventListener('submit', this.handleUploadSubmit.bind(this));
         
+        this.ui.addTemplateButton.addEventListener('click', this.handleLoadTemplate.bind(this));
+        
         this.ui.selectAllButton.addEventListener('click', () => {
             this.ui.setAllCheckboxes(true);
             this.updateDisplayedFields();
@@ -61,10 +71,68 @@ class App {
             e.preventDefault();
             this.handleExport('translated');
         });
+        if (this.ui.appTitle) {
+            this.ui.appTitle.addEventListener('click', this.handleGoToUpload.bind(this));
+        }
+        if (this.ui.backToUploadButton) {
+            this.ui.backToUploadButton.addEventListener('click', this.handleGoToUpload.bind(this));
+        }
+    }
 
-        this.ui.targetLanguageSelect.addEventListener('change', () => {
-            this.ui.updateLanguageLabel();
-        });
+    private handleGoToUpload(): void {
+        this.ui.resetToUploadView();
+        this.state.setUploadResult('', {}); 
+        this.state.resetArrayTagKeys();
+    }
+
+    private async uploadFile(): Promise<boolean> {
+        const files = this.ui.fileInput.files;
+        if (!files || files.length === 0) {
+            this.ui.showAlert('Bitte wähle eine Datei aus.');
+            return false;
+        }
+
+        const formData = new FormData(this.ui.form);
+        
+        try {
+            const result = await this.api.uploadImage(formData);
+            this.state.setUploadResult(result.filename, result.metadata);
+            return true; 
+        } catch (error) {
+            console.error('Upload Fehler:', error);
+            const message = (error instanceof Error) ? error.message : String(error);
+            this.ui.showAlert(`Fehler beim Hochladen der Datei: ${message}`);
+            return false; 
+        }
+    }
+
+    private async handleLoadTemplate(): Promise<void> {
+        const files = this.ui.fileInput.files;
+        if (!files || files.length === 0) {
+            this.ui.showAlert("Bitte wähle zuerst ein Bild aus, auf das die Vorlage angewendet werden soll.");
+            return; 
+        }
+        
+        const selectedFilename = files[0].name;
+        let isUploaded = (this.state.getFilename() === selectedFilename);
+        if (!isUploaded) {
+            const uploadSuccess = await this.uploadFile();
+            if (!uploadSuccess) {
+
+                return;
+            }
+        }
+
+        this.state.setArrayTagKeys(TEMPLATE_ARRAY_KEYS);
+        this.ui.displayBlankTemplate(IPTC_TEMPLATE_FIELDS, TEMPLATE_ARRAY_KEYS);
+        this.ui.showResultsContainer(true);
+
+        const accordion = document.getElementById('tag-selection-accordion') as HTMLDetailsElement;
+        if (accordion) {
+             accordion.open = false;
+             const summary = accordion.querySelector('summary') as HTMLElement;
+             if (summary) summary.style.display = 'none';
+        }
     }
 
     private updateDisplayedFields(): void {
@@ -74,27 +142,20 @@ class App {
 
     private async handleUploadSubmit(event: Event): Promise<void> {
         event.preventDefault();
-        
-        const files = this.ui.fileInput.files;
-        if (!files || files.length === 0) {
-            this.ui.showAlert('Bitte wähle eine Datei aus.');
-            return;
-        }
 
-        const formData = new FormData(this.ui.form);
-        
-        try {
-            const result = await this.api.uploadImage(formData);
-            this.state.setUploadResult(result.filename, result.metadata);
+        const uploadSuccess = await this.uploadFile();
+
+        if (uploadSuccess) {
+            const accordion = document.getElementById('tag-selection-accordion') as HTMLDetailsElement;
+            if (accordion) {
+                accordion.open = true;
+                const summary = accordion.querySelector('summary') as HTMLElement;
+                if (summary) summary.style.display = 'block';
+            }
             
             this.ui.populateTagSelection(this.state.getMetadata());
             this.updateDisplayedFields();
             this.ui.showResultsContainer(true);
-
-        } catch (error) {
-            console.error('Upload Fehler:', error);
-            const message = (error instanceof Error) ? error.message : String(error);
-            this.ui.showAlert(`Fehler beim Auslesen der Metadaten: ${message}`);
         }
     }
 

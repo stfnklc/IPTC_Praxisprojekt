@@ -2,7 +2,7 @@ export class UiService {
     public readonly form: HTMLFormElement;
     public readonly fileInput: HTMLInputElement;
     public readonly resultsContainer: HTMLElement;
-    public readonly tagSelectionFieldset: HTMLFieldSetElement;
+    public readonly tagSelectionFieldset: HTMLElement; 
     public readonly tagSelectionOptions: HTMLElement;
     public readonly selectAllButton: HTMLButtonElement;
     public readonly deselectAllButton: HTMLButtonElement;
@@ -15,7 +15,12 @@ export class UiService {
     public readonly exportEditedButton: HTMLButtonElement;
     public readonly exportTranslatedButton: HTMLButtonElement;
     public readonly targetLanguageSelect: HTMLSelectElement;
-    public readonly translationTargetLangLabel: HTMLElement;
+    public readonly uploadCard: HTMLElement;
+    public readonly resultsCard: HTMLElement;
+    private readonly fileNameDisplay: HTMLElement;
+    public readonly addTemplateButton: HTMLButtonElement; 
+    public readonly appTitle: HTMLElement;
+    public readonly backToUploadButton: HTMLButtonElement;
 
     private readonly COMMON_TAGS: string[] = [
         'IPTC:ObjectName', 'File:FileName', 'XMP:Title',
@@ -30,7 +35,7 @@ export class UiService {
         this.form = document.getElementById('upload-form') as HTMLFormElement;
         this.fileInput = document.getElementById('image-upload') as HTMLInputElement;
         this.resultsContainer = document.getElementById('results-container')!;
-        this.tagSelectionFieldset = document.getElementById('tag-selection-fieldset') as HTMLFieldSetElement;
+        this.tagSelectionFieldset = document.getElementById('tag-selection-fieldset') as HTMLElement; 
         this.tagSelectionOptions = document.getElementById('tag-selection-options')!;
         this.selectAllButton = document.getElementById('select-all-tags') as HTMLButtonElement;
         this.deselectAllButton = document.getElementById('deselect-all-tags') as HTMLButtonElement;
@@ -43,59 +48,188 @@ export class UiService {
         this.exportEditedButton = document.getElementById('export-edited-button') as HTMLButtonElement;
         this.exportTranslatedButton = document.getElementById('export-translated-button') as HTMLButtonElement;
         this.targetLanguageSelect = document.getElementById('target-language') as HTMLSelectElement;
-        this.translationTargetLangLabel = document.getElementById('translation-target-lang-label')!;
+        this.uploadCard = document.getElementById('upload-card')!;
+        this.resultsCard = document.getElementById('results-card')!;
+        this.fileNameDisplay = document.getElementById('file-name-display')!;
+        this.addTemplateButton = document.getElementById('add-template-button') as HTMLButtonElement; 
+        this.appTitle = document.getElementById('app-title') as HTMLElement;
+        this.backToUploadButton = document.getElementById('back-to-upload-button') as HTMLButtonElement;
+
+        if (this.appTitle) {
+            this.appTitle.style.cursor = "pointer";
+        }
+        this.fileInput.addEventListener('change', () => {
+            if (this.fileInput.files && this.fileInput.files.length > 0) {
+                this.fileNameDisplay.textContent = this.fileInput.files[0].name;
+                this.fileNameDisplay.style.color = 'var(--foreground)';
+            } else {
+                this.fileNameDisplay.textContent = 'Datei auswählen (Keine ausgewählt)';
+                this.fileNameDisplay.style.color = 'var(--muted-foreground)';
+            }
+        });
     }
     
     public showResultsContainer(show: boolean): void {
-        this.resultsContainer.style.display = show ? 'block' : 'none';
+        this.uploadCard.style.display = show ? 'none' : 'block';
+        this.resultsCard.style.display = show ? 'block' : 'none';
+    }
+
+    public resetToUploadView(): void {
+        this.showResultsContainer(false);
+        this.fileNameDisplay.textContent = 'Datei auswählen (Keine ausgewählt)';
+        this.fileNameDisplay.style.color = 'var(--muted-foreground)';
+        this.fileInput.value = ''; 
+
+        const accordion = document.getElementById('tag-selection-accordion') as HTMLDetailsElement;
+        if (accordion) {
+             accordion.open = true;
+             const summary = accordion.querySelector('summary') as HTMLElement;
+             if (summary) summary.style.display = 'block';
+        }
+        this.originalFieldsContainer.innerHTML = '';
+        this.translatedFieldsContainer.innerHTML = '';
     }
 
     public populateTagSelection(metadata: Record<string, any>): void {
-        this.tagSelectionOptions.innerHTML = '';
+        this.tagSelectionOptions.innerHTML = ''; 
+
+        const groupedTags = new Map<string, string[]>();
         const tagKeys = Object.keys(metadata).sort();
 
         tagKeys.forEach(tagKey => {
             if (tagKey === 'SourceFile' || tagKey === 'ExifToolVersion' || tagKey === 'errors' || tagKey.startsWith('File:')) return;
-
             const value = metadata[tagKey];
             if (value === null || value === undefined || (typeof value !== 'object' && !value) || (Array.isArray(value) && value.length === 0) ) return;
 
-            const div = document.createElement('div');
-            div.classList.add('tag-option');
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.id = `select-${tagKey}`;
-            checkbox.value = tagKey;
-            checkbox.checked = this.COMMON_TAGS.includes(tagKey);
-
-            const label = document.createElement('label');
-            label.htmlFor = `select-${tagKey}`;
-            label.textContent = tagKey;
-            label.title = String(value);
-
-            div.appendChild(checkbox);
-            div.appendChild(label);
-            this.tagSelectionOptions.appendChild(div);
+            let prefix = 'Sonstige'; 
+            if (tagKey.includes(':')) {
+                prefix = tagKey.split(':')[0];
+            }
+            if (!groupedTags.has(prefix)) {
+                groupedTags.set(prefix, []);
+            }
+            groupedTags.get(prefix)!.push(tagKey);
         });
-        this.tagSelectionFieldset.style.display = 'block';
+
+        groupedTags.forEach((tagKeys, prefix) => {
+            const details = document.createElement('details');
+            details.classList.add('tag-group-accordion');
+            details.open = (prefix === 'IPTC' || prefix === 'XMP');
+
+            const summary = document.createElement('summary');
+            summary.classList.add('tag-group-header');
+
+            const groupCheckbox = document.createElement('input');
+            groupCheckbox.type = 'checkbox';
+            groupCheckbox.classList.add('tag-group-select-all');
+            groupCheckbox.dataset.prefix = prefix;
+            
+            const labelSpan = document.createElement('span');
+            labelSpan.textContent = `${prefix} (${tagKeys.length} Tags)`;
+            
+            summary.appendChild(groupCheckbox);
+            summary.appendChild(labelSpan);
+
+            const contentDiv = document.createElement('div');
+            contentDiv.classList.add('tag-grid'); 
+
+            const childCheckboxes: HTMLInputElement[] = [];
+
+            tagKeys.forEach(key => {
+                const div = document.createElement('div');
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `select-${key}`;
+                checkbox.value = key;
+                checkbox.checked = this.COMMON_TAGS.includes(key);
+                childCheckboxes.push(checkbox);
+
+                const label = document.createElement('label');
+                label.htmlFor = `select-${key}`;
+                label.textContent = key; 
+                label.title = String(metadata[key]);
+
+                div.appendChild(checkbox);
+                div.appendChild(label);
+                contentDiv.appendChild(div);
+            });
+
+            this.addGroupCheckboxListener(groupCheckbox, childCheckboxes);
+            this.addChildCheckboxListeners(childCheckboxes, groupCheckbox);
+
+            this.updateGroupCheckboxState(groupCheckbox, childCheckboxes);
+
+            details.appendChild(summary);
+            details.appendChild(contentDiv);
+            this.tagSelectionOptions.appendChild(details);
+        });
+    }
+
+    private addGroupCheckboxListener(groupCheckbox: HTMLInputElement, children: HTMLInputElement[]): void {
+        groupCheckbox.addEventListener('click', (event) => {
+            event.stopPropagation(); 
+            const isChecked = groupCheckbox.checked;
+            children.forEach(child => child.checked = isChecked);
+        });
+    }
+
+    private addChildCheckboxListeners(children: HTMLInputElement[], groupCheckbox: HTMLInputElement): void {
+        children.forEach(child => {
+            child.addEventListener('click', () => {
+                setTimeout(() => {
+                    this.updateGroupCheckboxState(groupCheckbox, children);
+                }, 0);
+            });
+        });
+    }
+    private updateGroupCheckboxState(groupCheckbox: HTMLInputElement, children: HTMLInputElement[]): void {
+        const total = children.length;
+        const checkedCount = children.filter(child => child.checked).length;
+
+        if (checkedCount === 0) {
+            groupCheckbox.checked = false;
+            groupCheckbox.indeterminate = false;
+        } else if (checkedCount === total) {
+            groupCheckbox.checked = true;
+            groupCheckbox.indeterminate = false;
+        } else {
+            groupCheckbox.checked = false; 
+            groupCheckbox.indeterminate = true;
+        }
+    }
+
+    private updateAllGroupCheckboxes(): void {
+        this.tagSelectionOptions.querySelectorAll<HTMLElement>('.tag-group-accordion').forEach(detailsElement => {
+            const groupCheckbox = detailsElement.querySelector<HTMLInputElement>('.tag-group-select-all');
+            const children = Array.from(detailsElement.querySelectorAll<HTMLInputElement>('.tag-grid input[type="checkbox"]'));
+            
+            if (groupCheckbox && children.length > 0) {
+                this.updateGroupCheckboxState(groupCheckbox, children);
+            }
+        });
     }
 
     public setAllCheckboxes(checked: boolean): void {
-        this.tagSelectionOptions.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')
+        this.tagSelectionOptions.querySelectorAll<HTMLInputElement>('.tag-grid input[type="checkbox"]')
             .forEach(cb => cb.checked = checked);
+        this.tagSelectionOptions.querySelectorAll<HTMLInputElement>('.tag-group-select-all')
+            .forEach(groupCb => {
+                groupCb.checked = checked;
+                groupCb.indeterminate = false; 
+            });
     }
 
     public selectCommonCheckboxes(): void {
-        this.tagSelectionOptions.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')
+        this.tagSelectionOptions.querySelectorAll<HTMLInputElement>('.tag-grid input[type="checkbox"]')
             .forEach(cb => cb.checked = this.COMMON_TAGS.includes(cb.value));
+        this.updateAllGroupCheckboxes();
     }
 
     public displaySelectedMetadata(metadata: Record<string, any>): Set<string> {
         this.originalFieldsContainer.innerHTML = '';
         this.translatedFieldsContainer.innerHTML = '';
         const discoveredArrayTagKeys = new Set<string>();
-
-        const selectedCheckboxes = this.tagSelectionOptions.querySelectorAll<HTMLInputElement>('input[type="checkbox"]:checked');
+        const selectedCheckboxes = this.tagSelectionOptions.querySelectorAll<HTMLInputElement>('.tag-grid input[type="checkbox"]:checked');
 
         selectedCheckboxes.forEach((checkbox) => {
             const tagKey = checkbox.value;
@@ -183,7 +317,7 @@ export class UiService {
             } catch (domErr) { console.error(`FEHLER beim Erstellen der DOM-Elemente für ${tagKey}:`, domErr); }
         });
 
-        this.updateLanguageLabel();
+        
         return discoveredArrayTagKeys;
     }
 
@@ -278,18 +412,56 @@ export class UiService {
         if (languages.some(lang => lang.language === defaultLang)) {
             this.targetLanguageSelect.value = defaultLang; 
         }
-        this.updateLanguageLabel();
     }
 
     public setLanguageErrorState(): void {
         this.targetLanguageSelect.innerHTML = '<option value="">Fehler</option>';
     }
 
-    public updateLanguageLabel(): void {
-        this.translationTargetLangLabel.textContent = this.targetLanguageSelect.selectedOptions[0]?.text || this.targetLanguageSelect.value;
-    }
-
     public showAlert(message: string): void {
         alert(message);
     }
+    
+    public displayBlankTemplate(templateFields: string[], arrayKeySet: Set<string>): void {
+        this.originalFieldsContainer.innerHTML = '';
+        this.translatedFieldsContainer.innerHTML = '';
+        console.log("Zeichne leere Vorlage...");
+
+        templateFields.forEach((tagKey) => {
+            let elementType = 'input';
+            const isArray = arrayKeySet.has(tagKey);
+
+            if (isArray) {
+                elementType = 'textarea';
+            }
+            
+            try {
+                const ogGroup = document.createElement('div'); ogGroup.classList.add('form-group');
+                const ogLabel = document.createElement('label'); ogLabel.htmlFor = `original-${tagKey}`; ogLabel.textContent = tagKey;
+                const ogInput = document.createElement(elementType) as HTMLInputElement | HTMLTextAreaElement;
+                ogInput.id = `original-${tagKey}`;
+                ogInput.classList.add('original-field');
+                ogInput.dataset.tagKey = tagKey; 
+                if (elementType === 'textarea') (ogInput as HTMLTextAreaElement).rows = 3;
+                ogInput.value = '';
+                ogGroup.appendChild(ogLabel);
+                ogGroup.appendChild(ogInput);
+                this.originalFieldsContainer.appendChild(ogGroup);
+
+                const trGroup = document.createElement('div'); trGroup.classList.add('form-group');
+                const trLabel = document.createElement('label'); trLabel.htmlFor = `translated-${tagKey}`; trLabel.textContent = tagKey;
+                const trInput = document.createElement(elementType) as HTMLInputElement | HTMLTextAreaElement;
+                trInput.id = `translated-${tagKey}`;
+                trInput.classList.add('translated-field');
+                trInput.dataset.tagKey = tagKey;
+                if (elementType === 'textarea') (trInput as HTMLTextAreaElement).rows = 3;
+                trInput.value = '';
+                trGroup.appendChild(trLabel);
+                trGroup.appendChild(trInput);
+                this.translatedFieldsContainer.appendChild(trGroup);
+
+            } catch (domErr) { console.error(`FEHLER beim Erstellen der DOM-Elemente für ${tagKey}:`, domErr); }
+        }); 
+    }
 }
+
